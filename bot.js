@@ -125,11 +125,11 @@ bot.on('callback_query', async (query) => {
   const userId = query.from.id;
 
   if (query.data === 'check_subscription') {
-    const subscribed = await checkSubscription(userId);
-    const privateOk = approvedUsers.has(userId); // <<< bu qatorni qo‘shish
+    const subscribed = await checkSubscription(userId); // public kanallar
+    const privateOk = approvedUsers.has(userId);        // private kanal zayavka
 
-    if (!subscribed || !privateOk) {            // <<< bu qatorni o‘zgartirish
-      return bot.sendMessage(chatId, "❌ Avval barcha kanallarga obuna bo‘ling !");
+    if (!subscribed || !privateOk) {
+      return bot.sendMessage(chatId, "❌ Avval barcha kanallarga obuna bo‘ling va private kanalga zayavka tashlang!");
     }
 
     bot.sendMessage(chatId, "✅ Kerakli raqamni yuboring:");
