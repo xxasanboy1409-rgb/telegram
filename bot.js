@@ -10,6 +10,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const bot = new TelegramBot(token);
+// Approved (zayavka yuborgan) users
+const approvedUsers = new Set();
 
 // Webhook uchun maxfiy yo‘l
 const WEBHOOK_PATH = '/secret-path';
@@ -73,6 +75,7 @@ const DOMAIN = process.env.DOMAIN || 'https://your-render-url.onrender.com';
 bot.on('chat_join_request', async (req) => {
   try {
     await bot.approveChatJoinRequest(req.chat.id, req.from.id);
+    approvedUsers.add(req.from.id); // <<< private zayavka flag
     console.log(`User qabul qilindi: ${req.from.id}`);
   } catch (e) {
     console.log("Approve error:", e.message);
@@ -85,23 +88,24 @@ bot.onText(/\/start/, async (msg) => {
   const userId = msg.from.id;
 
   const subscribed = await checkSubscription(userId);
+  const privateOk = approvedUsers.has(userId); // <<< bu qatorni qo‘shish
 
-  if (!subscribed) {
+  if (!subscribed || !privateOk) {             // <<< bu qatorni o‘zgartirish
     const keyboard = {
       inline_keyboard: [
         ...channels.map(ch => [{ text: ch.name,
-  url: ch.link ? ch.link : `https://t.me/${ch.username.replace('@', '')}` }]),
+          url: ch.link ? ch.link : `https://t.me/${ch.username.replace('@', '')}` }]),
         [{ text: '✅ Obuna bo‘ldim', callback_data: 'check_subscription' }]
       ]
     };
 
-    bot.sendMessage(chatId, "📢 <b>Botdan foydalanish uchun barcha kanallarga obuna bo‘ling:</b>", {
+    return bot.sendMessage(chatId, "📢 <b>Botdan foydalanish uchun barcha kanallarga obuna bo‘ling va private kanallarda zayavka tashlang:</b>", {
       parse_mode: 'HTML',
       reply_markup: keyboard
     });
-  } else {
-    bot.sendMessage(chatId, "🔢 Iltimos, kerakli raqamni yuboring:", { parse_mode: 'HTML' });
   }
+
+  bot.sendMessage(chatId, "🔢 Endi kerakli raqamni yuboring:", { parse_mode: 'HTML' });
 });
 
 // "Obuna bo‘ldim" tugmasi bosilganda obunani qayta tekshirish
@@ -111,23 +115,18 @@ bot.on('callback_query', async (query) => {
 
   if (query.data === 'check_subscription') {
     const subscribed = await checkSubscription(userId);
+    const privateOk = approvedUsers.has(userId); // <<< bu qatorni qo‘shish
 
-    if (!subscribed) {
-      // ❌ Public kanal tekshirildi, user obuna bo‘lmasa
+    if (!subscribed || !privateOk) {            // <<< bu qatorni o‘zgartirish
       return bot.sendMessage(chatId, "❌ Avval barcha public kanallarga obuna bo‘ling va private kanallarda zayavka tashlang!");
     }
 
-    // 🔹 Public kanal ok, private link tekshiradigan xabar
-    bot.sendMessage(chatId, "⚠️ Barcha kanallarga kirib, zayavka yuborganingizga ishonch hosil qiling!");
-
-    // 🔹 Delay bilan keyingi xabar
-    setTimeout(() => {
-      bot.sendMessage(chatId, "✅ Endi kerakli raqamni yuboring:");
-    }, 3000);
+    bot.sendMessage(chatId, "✅ Endi barcha shart bajarildi. Kerakli raqamni yuboring:");
   }
 
   await bot.answerCallbackQuery(query.id);
 });
+
 // Foydalanuvchi raqam yuborganida faylni jo‘natish
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
@@ -135,12 +134,13 @@ bot.on('message', async (msg) => {
   const text = msg.text;
 
   if (!text) return;
-
   if (text.startsWith('/start')) return; // /start allaqachon ishlangan
 
   const subscribed = await checkSubscription(userId);
-  if (!subscribed) {
-    return bot.sendMessage(chatId, "🚫 Iltimos, avval barcha kanallarga obuna bo‘ling.");
+  const privateOk = approvedUsers.has(userId); // <<< bu qatorni qo‘shish
+
+  if (!subscribed || !privateOk) {            // <<< bu qatorni o‘zgartirish
+    return bot.sendMessage(chatId, "🚫 Avval barcha public kanallarga obuna bo‘ling va private kanallarda zayavka tashlang.");
   }
 
   if (!files.hasOwnProperty(text)) {
