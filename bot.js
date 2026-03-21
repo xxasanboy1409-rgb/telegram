@@ -76,7 +76,7 @@ bot.on('chat_join_request', async (req) => {
   try {
     await bot.approveChatJoinRequest(req.chat.id, req.from.id);
     approvedUsers.add(req.from.id); // <<< private zayavka flag
-    console.log(`User qabul qilindi: ${req.from.id}`);
+    console.log(`Zyafka keldi: ${req.from.id}`);
   } catch (e) {
     console.log("Approve error:", e.message);
   }
@@ -99,13 +99,13 @@ bot.onText(/\/start/, async (msg) => {
       ]
     };
 
-    return bot.sendMessage(chatId, "📢 <b>Botdan foydalanish uchun barcha kanallarga obuna bo‘ling va private kanallarda zayavka tashlang:</b>", {
+    return bot.sendMessage(chatId, "📢 <b>Botdan foydalanish uchun barcha kanallarga obuna bo‘ling :</b>", {
       parse_mode: 'HTML',
       reply_markup: keyboard
     });
   }
 
-  bot.sendMessage(chatId, "🔢 Endi kerakli raqamni yuboring:", { parse_mode: 'HTML' });
+  bot.sendMessage(chatId, "🔢  kerakli raqamni yuboring:", { parse_mode: 'HTML' });
 });
 
 // "Obuna bo‘ldim" tugmasi bosilganda obunani qayta tekshirish
@@ -118,10 +118,10 @@ bot.on('callback_query', async (query) => {
     const privateOk = approvedUsers.has(userId); // <<< bu qatorni qo‘shish
 
     if (!subscribed || !privateOk) {            // <<< bu qatorni o‘zgartirish
-      return bot.sendMessage(chatId, "❌ Avval barcha public kanallarga obuna bo‘ling va private kanallarda zayavka tashlang!");
+      return bot.sendMessage(chatId, "❌ Avval barcha kanallarga obuna bo‘ling !");
     }
 
-    bot.sendMessage(chatId, "✅ Endi barcha shart bajarildi. Kerakli raqamni yuboring:");
+    bot.sendMessage(chatId, "✅ Kerakli raqamni yuboring:");
   }
 
   await bot.answerCallbackQuery(query.id);
@@ -140,7 +140,7 @@ bot.on('message', async (msg) => {
   const privateOk = approvedUsers.has(userId); // <<< bu qatorni qo‘shish
 
   if (!subscribed || !privateOk) {            // <<< bu qatorni o‘zgartirish
-    return bot.sendMessage(chatId, "🚫 Avval barcha public kanallarga obuna bo‘ling va private kanallarda zayavka tashlang.");
+    return bot.sendMessage(chatId, "🚫 Avval barcha  kanallarga obuna bo‘ling .");
   }
 
   if (!files.hasOwnProperty(text)) {
