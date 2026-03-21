@@ -71,20 +71,26 @@ const DOMAIN = process.env.DOMAIN || 'https://your-render-url.onrender.com';
     console.error('Webhook o‘rnatishda xatolik:', error);
   }
 })();
-// 🔥 PRIVATE kanal uchun auto approve
+// 🔥 PRIVATE kanal uchun auto approve faqat public kanallarga obuna bo‘lganlar
 bot.on('chat_join_request', async (req) => {
   const userId = req.from.id;
 
-  // Foydalanuvchi public kanallarga obuna bo‘lganini tekshiramiz
+  // Foydalanuvchi barcha public kanallarga obuna bo‘lganini tekshiramiz
   const subscribed = await checkAllSubscriptions(userId);
 
   if (!subscribed) {
     console.log(`Zayavka rad etildi, foydalanuvchi public kanallarga obuna emas: ${userId}`);
-  } else {
-    console.log(`Foydalanuvchi public kanallarga obuna, private kanal zayavkasi: ${userId}`);
+    return; // ruxsat bermaymiz
   }
 
-  // Hech qachon avtomatik approve qilinmaydi
+  try {
+    // Public kanallarga obuna bo‘lgan foydalanuvchi private kanalga zayavka tashlasa avtomatik approve
+    await bot.approveChatJoinRequest(req.chat.id, userId);
+    approvedUsers.add(userId); // botdan foydalanish uchun flag
+    console.log(`Zayavka qabul qilindi va foydalanuvchi botdan foydalanishi mumkin: ${userId}`);
+  } catch (e) {
+    console.log("Approve error:", e.message);
+  }
 });
 
 // /start komandasi
