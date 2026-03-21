@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const express = require('express');
+const { link } = require('fs');
 const TelegramBot = require('node-telegram-bot-api');
 const path = require('path');
 
@@ -16,9 +17,9 @@ const WEBHOOK_PATH = '/secret-path';
 // Kanallar ro'yxati
 const channels = [
   { name: "CHANEL", username: "@sheraliyevich_web" },
-  { name: "1K", username: "https://t.me/+6MhWUo0r0pxjMzZi" },
-  { name: "2K", username: "https://t.me/+WIacVc4EDhg0YmIy" },
-  { name: "3K", username: "https://t.me/+J2Z3cbzhixgzNTli" }
+  { name: "1K", link: "https://t.me/+hxFSNywQS8w3Yjc6" },
+  { name: "2K", link: "https://t.me/+WIacVc4EDhg0YmIy" },
+  { name: "3K", link: "https://t.me/+J2Z3cbzhixgzNTli" }
 ];
 
 // Raqamlarga mos fayllar ro'yxati
