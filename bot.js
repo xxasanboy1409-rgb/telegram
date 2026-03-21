@@ -15,8 +15,8 @@ const bot = new TelegramBot(token);
 const WEBHOOK_PATH = '/secret-path';
 
 // Kanallar ro'yxati
-const channels = [
-  { name: "CHANEL", username: "@sheraliyevich_web" },
+ const channels = [
+  { name: "CHANEL", username: "@sheraliyevich_web" }, // public
   { name: "1K", link: "https://t.me/+hxFSNywQS8w3Yjc6" },
   { name: "2K", link: "https://t.me/+WIacVc4EDhg0YmIy" },
   { name: "3K", link: "https://t.me/+J2Z3cbzhixgzNTli" }
@@ -33,13 +33,15 @@ const files = {
 // Foydalanuvchi barcha kanallarga obuna bo‘lganini tekshirish funksiyasi
 async function checkSubscription(userId) {
   for (const ch of channels) {
+    if (!ch.username) continue; // private skip qiladi
+
     try {
       const member = await bot.getChatMember(ch.username, userId);
       if (!['member', 'administrator', 'creator'].includes(member.status)) {
         return false;
       }
     } catch (e) {
-      console.error(`Kanalni tekshirishda xatolik: ${ch.username}`, e.message);
+      console.error(`Xatolik: ${ch.username}`, e.message);
       return false;
     }
   }
@@ -68,6 +70,15 @@ const DOMAIN = process.env.DOMAIN || 'https://your-render-url.onrender.com';
     console.error('Webhook o‘rnatishda xatolik:', error);
   }
 })();
+// 🔥 PRIVATE kanal uchun auto approve
+bot.on('chat_join_request', async (req) => {
+  try {
+    await bot.approveChatJoinRequest(req.chat.id, req.from.id);
+    console.log(`User qabul qilindi: ${req.from.id}`);
+  } catch (e) {
+    console.log("Approve error:", e.message);
+  }
+});
 
 // /start komandasi
 bot.onText(/\/start/, async (msg) => {
@@ -79,7 +90,8 @@ bot.onText(/\/start/, async (msg) => {
   if (!subscribed) {
     const keyboard = {
       inline_keyboard: [
-        ...channels.map(ch => [{ text: ch.name, url: `https://t.me/${ch.username.replace('@', '')}` }]),
+        ...channels.map(ch => [{ text: ch.name,
+  url: ch.link ? ch.link : `https://t.me/${ch.username.replace('@', '')}` }]),
         [{ text: '✅ Obuna bo‘ldim', callback_data: 'check_subscription' }]
       ]
     };
