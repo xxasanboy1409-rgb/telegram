@@ -33,8 +33,8 @@ const files = {
 // Foydalanuvchi barcha kanallarga obuna bo‘lganini tekshirish funksiyasi
 async function checkSubscription(userId) {
   for (const ch of channels) {
-    if (!ch.username) continue; // private skip qiladi
-
+    if (!ch.username) continue; // faqat public tekshirish
+    
     try {
       const member = await bot.getChatMember(ch.username, userId);
       if (!['member', 'administrator', 'creator'].includes(member.status)) {
@@ -47,7 +47,6 @@ async function checkSubscription(userId) {
   }
   return true;
 }
-
 // Express JSON qabul qilish uchun middleware
 app.use(express.json());
 
@@ -113,16 +112,22 @@ bot.on('callback_query', async (query) => {
   if (query.data === 'check_subscription') {
     const subscribed = await checkSubscription(userId);
 
-    if (subscribed) {
-      bot.sendMessage(chatId, "✅ Obunangiz tasdiqlandi. Endi kerakli raqamni yuboring:");
-    } else {
-      bot.sendMessage(chatId, "❌ Siz barcha kanallarga obuna bo‘lmagansiz. Iltimos, davom eting.");
+    if (!subscribed) {
+      // ❌ Public kanal tekshirildi, user obuna bo‘lmasa
+      return bot.sendMessage(chatId, "❌ Avval barcha public kanallarga obuna bo‘ling va private kanallarda zayavka tashlang!");
     }
+
+    // 🔹 Public kanal ok, private link tekshiradigan xabar
+    bot.sendMessage(chatId, "⚠️ Barcha kanallarga kirib, zayavka yuborganingizga ishonch hosil qiling!");
+
+    // 🔹 Delay bilan keyingi xabar
+    setTimeout(() => {
+      bot.sendMessage(chatId, "✅ Endi kerakli raqamni yuboring:");
+    }, 3000);
   }
 
   await bot.answerCallbackQuery(query.id);
 });
-
 // Foydalanuvchi raqam yuborganida faylni jo‘natish
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
