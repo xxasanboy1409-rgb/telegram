@@ -15,8 +15,8 @@ const bot = new TelegramBot(token);
 const WEBHOOK_PATH = '/secret-path';
 
 // Kanallar ro'yxati
- const channels = [
-  { name: "CHANEL", username: "@sheraliyevich_web" }, // public
+const channels = [
+  { name: "CHANEL", username: "@sheraliyevich_web" },
   { name: "1K", link: "https://t.me/+hxFSNywQS8w3Yjc6" },
   { name: "2K", link: "https://t.me/+cRKttnQsQPxkZjM6" },
   { name: "3K", link: "https://t.me/+rSdf0a0lfy4xZGZi" }
@@ -24,29 +24,28 @@ const WEBHOOK_PATH = '/secret-path';
 
 // Raqamlarga mos fayllar ro'yxati
 const files = {
-  '1': { type: 'video', path: path.join(__dirname, 'video1.mp4'), caption: "🎬 Mana siz so‘ragan video!" },
-  '2': { type: 'document', path: path.join(__dirname, 'file.rar'), caption: "📄 Mana siz so‘ragan hujjat!" },
-  '3': { type: 'document', path: path.join(__dirname, '3 HONA WEB SAHIFA.zip'), caption: "📄 3 HONA WEB SAHIFA!" },
+  '1': { type: 'video', path: path.join(__dirname, ''), caption: "🎬 Mana siz so‘ragan video!" },
+  '2': { type: 'document', path: path.join(__dirname, ''), caption: "📄 Mana siz so‘ragan hujjat!" },
+  '3': { type: 'document', path: path.join(__dirname, ''), caption: "📄 3 HONA WEB SAHIFA!" },
   '4': { type: 'document', path: path.join(__dirname, 'Portfolio.zip'), caption: "📄 Portfolio!" }
 };
 
 // Foydalanuvchi barcha kanallarga obuna bo‘lganini tekshirish funksiyasi
 async function checkSubscription(userId) {
   for (const ch of channels) {
-    if (!ch.username) continue; // faqat public tekshirish
-    
     try {
       const member = await bot.getChatMember(ch.username, userId);
       if (!['member', 'administrator', 'creator'].includes(member.status)) {
         return false;
       }
     } catch (e) {
-      console.error(`Xatolik: ${ch.username}`, e.message);
+      console.error(`Kanalni tekshirishda xatolik: ${ch.username}`, e.message);
       return false;
     }
   }
   return true;
 }
+
 // Express JSON qabul qilish uchun middleware
 app.use(express.json());
 
@@ -69,15 +68,6 @@ const DOMAIN = process.env.DOMAIN || 'https://your-render-url.onrender.com';
     console.error('Webhook o‘rnatishda xatolik:', error);
   }
 })();
-// 🔥 PRIVATE kanal uchun auto approve
-bot.on('chat_join_request', async (req) => {
-  try {
-    await bot.approveChatJoinRequest(req.chat.id, req.from.id);
-    console.log(`User qabul qilindi: ${req.from.id}`);
-  } catch (e) {
-    console.log("Approve error:", e.message);
-  }
-});
 
 // /start komandasi
 bot.onText(/\/start/, async (msg) => {
@@ -89,8 +79,7 @@ bot.onText(/\/start/, async (msg) => {
   if (!subscribed) {
     const keyboard = {
       inline_keyboard: [
-        ...channels.map(ch => [{ text: ch.name,
-  url: ch.link ? ch.link : `https://t.me/${ch.username.replace('@', '')}` }]),
+        ...channels.map(ch => [{ text: ch.name, url: `https://t.me/${ch.username.replace('@', '')}` }]),
         [{ text: '✅ Obuna bo‘ldim', callback_data: 'check_subscription' }]
       ]
     };
@@ -112,22 +101,16 @@ bot.on('callback_query', async (query) => {
   if (query.data === 'check_subscription') {
     const subscribed = await checkSubscription(userId);
 
-    if (!subscribed) {
-      // ❌ Public kanal tekshirildi, user obuna bo‘lmasa
-      return bot.sendMessage(chatId, "❌ Avval barcha public kanallarga obuna bo‘ling va private kanallarda zayavka tashlang!");
+    if (subscribed) {
+      bot.sendMessage(chatId, "✅ Obunangiz tasdiqlandi. Endi kerakli raqamni yuboring:");
+    } else {
+      bot.sendMessage(chatId, "❌ Siz barcha kanallarga obuna bo‘lmagansiz. Iltimos, davom eting.");
     }
-
-    // 🔹 Public kanal ok, private link tekshiradigan xabar
-    bot.sendMessage(chatId, "⚠️ Barcha kanallarga kirib, zayavka yuborganingizga ishonch hosil qiling!");
-
-    // 🔹 Delay bilan keyingi xabar
-    setTimeout(() => {
-      bot.sendMessage(chatId, "✅ Endi kerakli raqamni yuboring:");
-    }, 3000);
   }
 
   await bot.answerCallbackQuery(query.id);
 });
+
 // Foydalanuvchi raqam yuborganida faylni jo‘natish
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
