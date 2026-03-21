@@ -18,8 +18,8 @@ const WEBHOOK_PATH = '/secret-path';
  const channels = [
   { name: "CHANEL", username: "@sheraliyevich_web" }, // public
   { name: "1K", link: "https://t.me/+hxFSNywQS8w3Yjc6" },
-  { name: "2K", link: "https://t.me/+WIacVc4EDhg0YmIy" },
-  { name: "3K", link: "https://t.me/+J2Z3cbzhixgzNTli" }
+  { name: "2K", link: "https://t.me/+cRKttnQsQPxkZjM6" },
+  { name: "3K", link: "https://t.me/+rSdf0a0lfy4xZGZi" }
 ];
 
 // Raqamlarga mos fayllar ro'yxati
