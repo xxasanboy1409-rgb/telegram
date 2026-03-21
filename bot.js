@@ -73,13 +73,18 @@ const DOMAIN = process.env.DOMAIN || 'https://your-render-url.onrender.com';
 })();
 // 🔥 PRIVATE kanal uchun auto approve
 bot.on('chat_join_request', async (req) => {
-  try {
-    await bot.approveChatJoinRequest(req.chat.id, req.from.id);
-    approvedUsers.add(req.from.id); // <<< private zayavka flag
-    console.log(`Zyafka keldi: ${req.from.id}`);
-  } catch (e) {
-    console.log("Approve error:", e.message);
+  const userId = req.from.id;
+
+  // Foydalanuvchi public kanallarga obuna bo‘lganini tekshiramiz
+  const subscribed = await checkAllSubscriptions(userId);
+
+  if (!subscribed) {
+    console.log(`Zayavka rad etildi, foydalanuvchi public kanallarga obuna emas: ${userId}`);
+  } else {
+    console.log(`Foydalanuvchi public kanallarga obuna, private kanal zayavkasi: ${userId}`);
   }
+
+  // Hech qachon avtomatik approve qilinmaydi
 });
 
 // /start komandasi
