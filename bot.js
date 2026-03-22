@@ -30,8 +30,11 @@ const channels = [
 ];
 
 const joinLinks = [
-  { name: "PRIVATE", link: "https://t.me/+hxFSNywQS8w3Yjc6" }
+  { name: "PRIVATE", link: "https://t.me/+hxFSNywQS8w3Yjc6" },
+  { name: "PRIVATE", link: "https://t.me/+CAohVwhcnnE2NmI6"},
+  { name: "PRIVATE", link: "https://t.me/+lqbcrISkeSBiMzNi"}
 ];
+
 
 // ===== FILES =====
 const files = {
