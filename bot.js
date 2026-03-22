@@ -16,9 +16,9 @@ const WEBHOOK_PATH = '/secret-path';
 
 // Kanallar ro'yxati
 const channels = [
-  { name: "🎥 1-Kanal", username: "@dgjoni_yt" },
-  { name: "📚 2-Kanal", username: "@SHERALIYEVICHweb" },
-  { name: "📚 3-Kanal", username: "@dgjonipubgm" }
+  { name: "CHANEL", username: "@dgjoni_yt" },
+  { name: "CHANEL", username: "@sheraliyevichweb" },
+  { name: "CHANEL", username: "@dgjonipubgm" }
 ];
 
 // Raqamlarga mos fayllar
