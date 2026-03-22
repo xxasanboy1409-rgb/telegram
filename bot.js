@@ -1,147 +1,147 @@
 require('dotenv').config();
 
 const express = require('express');
-const { link } = require('fs');
 const TelegramBot = require('node-telegram-bot-api');
 const path = require('path');
 
 const token = process.env.BOT_TOKEN;
+const DOMAIN = process.env.DOMAIN;
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Webhook yo‘li
+const WEBHOOK_PATH = `/bot${token}`;
+
 const bot = new TelegramBot(token);
+bot.setWebHook(`${DOMAIN}${WEBHOOK_PATH}`);
 
-// Webhook uchun maxfiy yo‘l
-const WEBHOOK_PATH = '/secret-path';
-
-// Kanallar ro'yxati
+// Faqat username bor kanallar (tekshirish uchun)
 const channels = [
-  { name: "CHANEL", username: "@sheraliyevich_web" },
+  { name: "CHANEL", username: "@sheraliyevich_web" }
+];
+
+// Link-only kanallar (faqat ko‘rsatish uchun)
+const joinLinks = [
   { name: "1K", link: "https://t.me/+hxFSNywQS8w3Yjc6" },
   { name: "2K", link: "https://t.me/+cRKttnQsQPxkZjM6" },
   { name: "3K", link: "https://t.me/+rSdf0a0lfy4xZGZi" }
 ];
 
-// Raqamlarga mos fayllar ro'yxati
+// Fayllar
 const files = {
-  '1': { type: 'video', path: path.join(__dirname, ''), caption: "🎬 Mana siz so‘ragan video!" },
-  '2': { type: 'document', path: path.join(__dirname, ''), caption: "📄 Mana siz so‘ragan hujjat!" },
-  '3': { type: 'document', path: path.join(__dirname, ''), caption: "📄 3 HONA WEB SAHIFA!" },
-  '4': { type: 'document', path: path.join(__dirname, 'Portfolio.zip'), caption: "📄 Portfolio!" }
+  '1': { type: 'video', path: path.join(__dirname, 'video.mp4'), caption: "🎬 Video" },
+  '2': { type: 'document', path: path.join(__dirname, 'file.pdf'), caption: "📄 Hujjat" },
+  '3': { type: 'document', path: path.join(__dirname, 'web.zip'), caption: "🌐 Web sahifa" },
+  '4': { type: 'document', path: path.join(__dirname, 'Portfolio.zip'), caption: "📁 Portfolio" }
 };
 
-// Foydalanuvchi barcha kanallarga obuna bo‘lganini tekshirish funksiyasi
+// Obuna tekshirish
 async function checkSubscription(userId) {
-  for (const ch of channels) {
-    try {
+  try {
+    for (const ch of channels) {
       const member = await bot.getChatMember(ch.username, userId);
       if (!['member', 'administrator', 'creator'].includes(member.status)) {
         return false;
       }
-    } catch (e) {
-      console.error(`Kanalni tekshirishda xatolik: ${ch.username}`, e.message);
-      return false;
     }
+    return true;
+  } catch (err) {
+    console.log("Check error:", err.message);
+    return false;
   }
-  return true;
 }
 
-// Express JSON qabul qilish uchun middleware
+// Klaviatura
+function getJoinKeyboard() {
+  return {
+    inline_keyboard: [
+      ...channels.map(ch => [
+        { text: ch.name, url: `https://t.me/${ch.username.replace('@', '')}` }
+      ]),
+      ...joinLinks.map(ch => [
+        { text: ch.name, url: ch.link }
+      ]),
+      [{ text: '✅ Tekshirish', callback_data: 'check' }]
+    ]
+  };
+}
+
+// Express
 app.use(express.json());
 
-// Webhook endpoint (faqat bitta kerak, takrorlanmasligi uchun ikkisini birlashtirdim)
 app.post(WEBHOOK_PATH, (req, res) => {
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
 
-// Webhook URL (o‘zingizning domeningiz bilan almashtiring)
-const DOMAIN = process.env.DOMAIN || 'https://your-render-url.onrender.com';
+app.listen(PORT, () => {
+  console.log(`Server ${PORT} da ishlayapti`);
+});
 
-// Server va webhookni ishga tushirish
-(async () => {
-  try {
-    await bot.setWebHook(DOMAIN + WEBHOOK_PATH);
-    app.listen(PORT, () => console.log(`Server ${PORT} portda ishga tushdi`));
-    console.log('Webhook muvaffaqiyatli o‘rnatildi');
-  } catch (error) {
-    console.error('Webhook o‘rnatishda xatolik:', error);
-  }
-})();
-
-// /start komandasi
+// START
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
 
-  const subscribed = await checkSubscription(userId);
+  const ok = await checkSubscription(userId);
 
-  if (!subscribed) {
-    const keyboard = {
-      inline_keyboard: [
-        ...channels.map(ch => [{ text: ch.name, url: `https://t.me/${ch.username.replace('@', '')}` }]),
-        [{ text: '✅ Obuna bo‘ldim', callback_data: 'check_subscription' }]
-      ]
-    };
-
-    bot.sendMessage(chatId, "📢 <b>Botdan foydalanish uchun barcha kanallarga obuna bo‘ling:</b>", {
-      parse_mode: 'HTML',
-      reply_markup: keyboard
-    });
-  } else {
-    bot.sendMessage(chatId, "🔢 Iltimos, kerakli raqamni yuboring:", { parse_mode: 'HTML' });
+  if (!ok) {
+    return bot.sendMessage(chatId,
+      "📢 <b>Kanallarga obuna bo‘ling:</b>",
+      { parse_mode: 'HTML', reply_markup: getJoinKeyboard() }
+    );
   }
+
+  bot.sendMessage(chatId, "🔢 Raqam yuboring (1-4):");
 });
 
-// "Obuna bo‘ldim" tugmasi bosilganda obunani qayta tekshirish
-bot.on('callback_query', async (query) => {
-  const chatId = query.message.chat.id;
-  const userId = query.from.id;
+// BUTTON
+bot.on('callback_query', async (q) => {
+  const chatId = q.message.chat.id;
+  const userId = q.from.id;
 
-  if (query.data === 'check_subscription') {
-    const subscribed = await checkSubscription(userId);
+  if (q.data === 'check') {
+    const ok = await checkSubscription(userId);
 
-    if (subscribed) {
-      bot.sendMessage(chatId, "✅ Obunangiz tasdiqlandi. Endi kerakli raqamni yuboring:");
+    if (ok) {
+      bot.sendMessage(chatId, "✅ Tasdiqlandi! Endi raqam yuboring.");
     } else {
-      bot.sendMessage(chatId, "❌ Siz barcha kanallarga obuna bo‘lmagansiz. Iltimos, davom eting.");
+      bot.sendMessage(chatId, "❌ Hali ham obuna emassiz!");
     }
   }
 
-  await bot.answerCallbackQuery(query.id);
+  bot.answerCallbackQuery(q.id);
 });
 
-// Foydalanuvchi raqam yuborganida faylni jo‘natish
+// MESSAGE
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   const text = msg.text;
 
-  if (!text) return;
+  if (!text || text.startsWith('/')) return;
 
-  if (text.startsWith('/start')) return; // /start allaqachon ishlangan
-
-  const subscribed = await checkSubscription(userId);
-  if (!subscribed) {
-    return bot.sendMessage(chatId, "🚫 Iltimos, avval barcha kanallarga obuna bo‘ling.");
-  }
-
-  if (!files.hasOwnProperty(text)) {
-    return bot.sendMessage(chatId, "⚠️ Kechirasiz, bunday raqam mavjud emas.");
+  const ok = await checkSubscription(userId);
+  if (!ok) {
+    return bot.sendMessage(chatId, "🚫 Avval obuna bo‘ling!", {
+      reply_markup: getJoinKeyboard()
+    });
   }
 
   const file = files[text];
+  if (!file) {
+    return bot.sendMessage(chatId, "❌ Noto‘g‘ri raqam (1-4)");
+  }
+
   try {
     if (file.type === 'video') {
       await bot.sendVideo(chatId, file.path, { caption: file.caption });
-    } else if (file.type === 'document') {
-      await bot.sendDocument(chatId, file.path, { caption: file.caption });
     } else {
-      bot.sendMessage(chatId, "⚠️ Fayl turi noto‘g‘ri belgilangan.");
+      await bot.sendDocument(chatId, file.path, { caption: file.caption });
     }
-  } catch (error) {
-    console.error("Fayl yuborishda xatolik:", error);
-    bot.sendMessage(chatId, "❌ Faylni yuborishda xatolik yuz berdi.");
+  } catch (err) {
+    console.log(err);
+    bot.sendMessage(chatId, "❌ Xatolik yuz berdi");
   }
 });
-
