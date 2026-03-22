@@ -3,64 +3,131 @@ require('dotenv').config();
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const path = require('path');
+const fs = require('fs');
 
 const token = process.env.BOT_TOKEN;
 const DOMAIN = process.env.DOMAIN;
 
+if (!token || !DOMAIN) {
+  throw new Error("TOKEN yoki DOMAIN .env da yo‘q!");
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Webhook yo‘li
+// Webhook
 const WEBHOOK_PATH = `/bot${token}`;
-
 const bot = new TelegramBot(token);
 bot.setWebHook(`${DOMAIN}${WEBHOOK_PATH}`);
 
-// Faqat username bor kanallar (tekshirish uchun)
+// CACHE
+const userCache = new Map();
+
+// 🔥 PRIVATE kanalga zayavka yuborganlar
+const requestedUsers = new Set();
+
+// 🔥 PRIVATE kanal ID (!!! O'ZING QO'YASAN)
+const PRIVATE_CHANNEL_ID = -1003531748359  -1003859050749  -1003830402105;
+
+
+
+// PUBLIC kanal
 const channels = [
   { name: "CHANEL", username: "@sheraliyevich_web" }
 ];
 
-// Link-only kanallar (faqat ko‘rsatish uchun)
+// PRIVATE linklar
 const joinLinks = [
-  { name: "1K", link: "https://t.me/+hxFSNywQS8w3Yjc6" },
-  { name: "2K", link: "https://t.me/+cRKttnQsQPxkZjM6" },
-  { name: "3K", link: "https://t.me/+rSdf0a0lfy4xZGZi" }
+  { name: "1K", link: "https://t.me/+CAohVwhcnnE2NmI6" },
+  { name: "2K", link: "https://t.me/+Rf02uu6fVm4yMDI6" },
+  { name: "3K", link: "https://t.me/+lqbcrISkeSBiMzNi" }
 ];
 
 // Fayllar
 const files = {
-  '1': { type: 'video', path: path.join(__dirname, 'video.mp4'), caption: "🎬 Video" },
-  '2': { type: 'document', path: path.join(__dirname, 'file.pdf'), caption: "📄 Hujjat" },
-  '3': { type: 'document', path: path.join(__dirname, 'web.zip'), caption: "🌐 Web sahifa" },
-  '4': { type: 'document', path: path.join(__dirname, 'Portfolio.zip'), caption: "📁 Portfolio" }
+  '1': { type: 'video', file: 'video.mp4', caption: "🎬 Video" },
+  '2': { type: 'document', file: 'file.pdf', caption: "📄 Hujjat" },
+  '3': { type: 'document', file: 'web.zip', caption: "🌐 Web sahifa" },
+  '4': { type: 'document', file: 'Portfolio.zip', caption: "📁 Portfolio" }
 };
 
-// Obuna tekshirish
+// 📌 Fayl tekshirish
+function getFilePath(fileName) {
+  const filePath = path.join(__dirname, fileName);
+  if (!fs.existsSync(filePath)) return null;
+  return filePath;
+}
+
+// 🔥 JOIN REQUEST (ENG MUHIM QISM)
+bot.on('chat_join_request', async (msg) => {
+  const userId = msg.from.id;
+  const chatId = msg.chat.id;
+
+  console.log(`Zayavka keldi: ${userId}`);
+
+  try {
+    // avtomatik approve
+    await bot.approveChatJoinRequest(chatId, userId);
+
+    // ozgina kutib member bo‘lganini tekshiramiz
+    setTimeout(async () => {
+      try {
+        const member = await bot.getChatMember(chatId, userId);
+
+        if (member.status === 'member') {
+          requestedUsers.add(userId);
+          userCache.set(userId, true);
+          console.log(`User tasdiqlandi: ${userId}`);
+        }
+      } catch (e) {
+        console.log("Member check error:", e.message);
+      }
+    }, 2000);
+
+  } catch (err) {
+    console.log("Approve error:", err.message);
+  }
+});
+
+// 🔒 OBUNA TEKSHIRISH (UPDATE)
 async function checkSubscription(userId) {
+
+  // cache
+  if (userCache.get(userId)) return true;
+
+  // 🔥 PRIVATE kanal tekshirish
+  if (!requestedUsers.has(userId)) {
+    return false;
+  }
+
+  // 🔥 PUBLIC kanal tekshirish
   try {
     for (const ch of channels) {
       const member = await bot.getChatMember(ch.username, userId);
+
       if (!['member', 'administrator', 'creator'].includes(member.status)) {
         return false;
       }
     }
+
+    userCache.set(userId, true);
     return true;
+
   } catch (err) {
     console.log("Check error:", err.message);
     return false;
   }
 }
 
-// Klaviatura
+// 🎛 Keyboard
 function getJoinKeyboard() {
   return {
     inline_keyboard: [
       ...channels.map(ch => [
-        { text: ch.name, url: `https://t.me/${ch.username.replace('@', '')}` }
+        { text: `📢 ${ch.name}`, url: `https://t.me/${ch.username.replace('@', '')}` }
       ]),
       ...joinLinks.map(ch => [
-        { text: ch.name, url: ch.link }
+        { text: `🔗 ${ch.name}`, url: ch.link }
       ]),
       [{ text: '✅ Tekshirish', callback_data: 'check' }]
     ]
@@ -76,7 +143,7 @@ app.post(WEBHOOK_PATH, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server ${PORT} da ishlayapti`);
+  console.log(`🚀 Server ${PORT} da ishlayapti`);
 });
 
 // START
@@ -88,7 +155,7 @@ bot.onText(/\/start/, async (msg) => {
 
   if (!ok) {
     return bot.sendMessage(chatId,
-      "📢 <b>Kanallarga obuna bo‘ling:</b>",
+      "📢 <b>Barcha kanallarga obuna bo‘ling:</b>",
       { parse_mode: 'HTML', reply_markup: getJoinKeyboard() }
     );
   }
@@ -105,9 +172,9 @@ bot.on('callback_query', async (q) => {
     const ok = await checkSubscription(userId);
 
     if (ok) {
-      bot.sendMessage(chatId, "✅ Tasdiqlandi! Endi raqam yuboring.");
+      bot.sendMessage(chatId, "✅ Tasdiqlandi!\n🔢 Endi raqam yuboring:");
     } else {
-      bot.sendMessage(chatId, "❌ Hali ham obuna emassiz!");
+      bot.sendMessage(chatId, "❌ Hali ham obuna bo‘lmadingiz!");
     }
   }
 
@@ -129,19 +196,24 @@ bot.on('message', async (msg) => {
     });
   }
 
-  const file = files[text];
-  if (!file) {
+  const data = files[text];
+  if (!data) {
     return bot.sendMessage(chatId, "❌ Noto‘g‘ri raqam (1-4)");
   }
 
+  const filePath = getFilePath(data.file);
+  if (!filePath) {
+    return bot.sendMessage(chatId, "⚠️ Fayl topilmadi");
+  }
+
   try {
-    if (file.type === 'video') {
-      await bot.sendVideo(chatId, file.path, { caption: file.caption });
+    if (data.type === 'video') {
+      await bot.sendVideo(chatId, filePath, { caption: data.caption });
     } else {
-      await bot.sendDocument(chatId, file.path, { caption: file.caption });
+      await bot.sendDocument(chatId, filePath, { caption: data.caption });
     }
   } catch (err) {
-    console.log(err);
+    console.log("Send error:", err.message);
     bot.sendMessage(chatId, "❌ Xatolik yuz berdi");
   }
 });
