@@ -17,7 +17,7 @@ const WEBHOOK_PATH = '/secret-path';
 // Kanallar ro'yxati
 const channels = [
   { name: "CHANEL", username: "@dgjoni_yt" },
-  { name: "CHANEL", username: "@sheraliyevichweb" },
+  { name: "CHANEL", username: "@sheraliyevich_web" },
   { name: "CHANEL", username: "@dgjonipubgm" }
 ];
 
